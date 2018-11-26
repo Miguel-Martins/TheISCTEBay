@@ -36,12 +36,29 @@ public class Directory {
 			while(true)
 			{
 				socket = serverSocket.accept();
-				new DirectoryConnectionThread(socket, users).start();
+				new DirectoryConnectionThread(socket, this).start();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
+	public List<User> getUsers()
+	{
+		return users;
+	}
+	
+	public void addUser(User user)
+	{
+		users.add(user);
+	}
+	
+	public void removeUser(User user)
+	{
+		synchronized (users) {
+			users.remove(user);
+			System.out.println(users);
+		}
+	}
 }
 	

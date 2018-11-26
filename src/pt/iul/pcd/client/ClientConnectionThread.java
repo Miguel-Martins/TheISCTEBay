@@ -58,5 +58,6 @@ public class ClientConnectionThread extends Thread {
 		FileResponse answer = client.searchForFile(message.getKeyword());
 		outToClient.writeObject(answer);
 		outToClient.flush();
+		incomingConnection.close();
 	}
 }

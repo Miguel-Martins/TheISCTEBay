@@ -36,7 +36,6 @@ public class InquiryThread extends Thread {
 		try {
 			searchForKeyword();
 			dealWithInput();
-			interrupt();
 		} catch (IOException e) {
 			System.out.println("Cliente saiu da conexão P2P");
 		} catch (ClassNotFoundException e) {
@@ -53,8 +52,7 @@ public class InquiryThread extends Thread {
 	{	
 		FileResponse fileDetails = (FileResponse) inFromClient.readObject();
 		System.out.println("RECEBI O FILERESPONSE");
-		if(fileDetails.getList() != null)
-			client.updateFileList(fileDetails);
+		client.updateFileList(fileDetails);
 	}
 	
 }

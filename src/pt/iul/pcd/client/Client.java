@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.DefaultListModel;
+
 import pt.iul.pcd.directory.Directory;
 import pt.iul.pcd.gui.GUI;
 import pt.iul.pcd.message.FileDetails;
@@ -35,14 +37,13 @@ public class Client {
 	// Atributos relativos ao servidor e comunicação com outros utilizadores
 	private ServerSocket serverSocket;
 	private ObjectOutputStream outToClient;
-    private ObjectInputStream inFromClient;
+	private ObjectInputStream inFromClient;
 	// Atributo relativo ao interface gráfico do utilizador
 	private GUI gui;
 	// Ficheiros
 	File[] files;
-	
-	public Client(String[] args)
-	{
+
+	public Client(String[] args) {
 		try {
 			loadGUI();
 			loadFields(args);
@@ -62,10 +63,8 @@ public class Client {
 	}
 
 	// Detalhes de execução
-	private void loadFields(String[] args)
-	{
-		if(args != null)
-		{
+	private void loadFields(String[] args) {
+		if (args != null) {
 			directoryAddress = args[0];
 			directoryPort = Integer.parseInt(args[1]);
 			clientPort = Integer.parseInt(args[2]);
@@ -73,7 +72,7 @@ public class Client {
 			files = new File(fileFolder).listFiles();
 		}
 	}
-	
+
 	// Ligação ao diretório através da socket e criação dos canais de comunicação
 	private void initializeConnection() throws IOException {
 		socket = new Socket(directoryAddress, directoryPort);
@@ -81,67 +80,62 @@ public class Client {
 		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 	}
-	
+
 	// Enviar mensagem ao diretorio e inscrever o utilizador
-	private void logIn() throws UnknownHostException
-	{
+	private void logIn() throws UnknownHostException {
 		out.println("INSC " + InetAddress.getByName(null).toString().split("/")[1] + " " + clientPort);
 	}
-	
+
 	private void initializeServer() {
 		try {
 			serverSocket = new ServerSocket(clientPort);
-			while(true)
-			{
+			while (true) {
 				Socket incomingConnection = serverSocket.accept();
 				System.out.println("Nova conexao");
 				new ClientConnectionThread(incomingConnection, this).start();
-				
+
 			}
 		} catch (IOException e) {
 			System.out.println("Cliente saiu da conexão P2P");
 		}
 	}
-	
+
 	// Procurar no diretório por ficheiro com a palavra chave dada
-	public void searchKeyword(String keyword){
+	public void searchKeyword(String keyword) {
 		try {
 			List<String[]> userInfo = getUserInfo();
-			for(String[] info: userInfo)
-			{
-				System.out.println("Percorrer os userPorts e criar InquiryThreads");
-				Socket socket = new Socket(info[0], Integer.parseInt(info[1]));
-				new InquiryThread(socket, keyword, this).start();
+			if (!userInfo.isEmpty()) {
+				for (String[] info : userInfo) {
+					System.out.println("Percorrer os userPorts e criar InquiryThreads");
+					Socket socket = new Socket(info[0], Integer.parseInt(info[1]));
+					new InquiryThread(socket, keyword, this).start();
+				}
+			} else {
+				System.out.println("Client - Lista Vazia");
+				gui.getDefaultListModel().clear();
 			}
 		} catch (IOException e) {
 			System.out.println("INQUIRY THREAD EXCEPÇÃO");
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
-	
-	private List<String[]> getUserInfo() throws IOException, InterruptedException
-	{
+
+	private List<String[]> getUserInfo() throws IOException, InterruptedException {
 		List<String[]> userInfo = new ArrayList<String[]>();
 		out.println(Directory.CONSULT);
-		while(true)
-		{
+		while (true) {
 			String message = in.readLine();
-			if(!message.equals(Directory.END_CONSULT) )
-			{
+			if (!message.equals(Directory.END_CONSULT)) {
 				String userAddress = message.split(" ")[1];
 				String userPort = message.split(" ")[2];
-				if(Integer.parseInt(userPort) != clientPort)
-				{
-//					System.out.println(userAddress + "/" + userPort);
-					String[] info = {userAddress, userPort};
+				if (Integer.parseInt(userPort) != clientPort) {
+					String[] info = { userAddress, userPort };
 					userInfo.add(info);
-				
+
 				}
-			}
-			else
+			} else
 				break;
 		}
 		return userInfo;
@@ -154,18 +148,14 @@ public class Client {
 
 	public FileResponse searchForFile(String fileName) {
 		FileResponse fileResponse = new FileResponse();
-		for(int i = 0; i != files.length; i++)
-		{
-			if(files[i].getName().contains(fileName)) {
-				fileResponse.addFileDetails(new FileDetails(files[i].getName(),files[i].length()));
+		for (int i = 0; i != files.length; i++) {
+			if (files[i].getName().contains(fileName)) {
+				fileResponse.addFileDetails(new FileDetails(files[i].getName(), files[i].length()));
 			}
-				
+
 		}
 		return fileResponse;
-		
+
 	}
 
-
-
-	
 }
