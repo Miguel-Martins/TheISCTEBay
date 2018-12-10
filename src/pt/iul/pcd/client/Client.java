@@ -14,17 +14,21 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-import javax.swing.DefaultListModel;
+import java.util.Map;
 
 import pt.iul.pcd.directory.Directory;
 import pt.iul.pcd.gui.GUI;
+import pt.iul.pcd.message.Block;
 import pt.iul.pcd.message.FileDetails;
 import pt.iul.pcd.message.FileResponse;
+import pt.iul.pcd.user.User;
 
 public class Client {
 
+	//Constante relativa ao tamanho máximo de um bloco em bits
+	public static final int MAX_BLOCK_LENGHT = 2;
 	// Atributos relativos aos detalhes de execução
 	private String directoryAddress;
 	private int directoryPort;
@@ -42,6 +46,8 @@ public class Client {
 	private GUI gui;
 	// Ficheiros
 	File[] files;
+	// HashMap
+	private Map<FileDetails, ArrayList<User>> peerList;
 
 	public Client(String[] args) {
 		try {
@@ -69,7 +75,7 @@ public class Client {
 			directoryPort = Integer.parseInt(args[1]);
 			clientPort = Integer.parseInt(args[2]);
 			fileFolder = args[3];
-			files = new File(fileFolder).listFiles();
+			files = new File(fileFolder).listFiles();	
 		}
 	}
 
@@ -103,27 +109,29 @@ public class Client {
 	// Procurar no diretório por ficheiro com a palavra chave dada
 	public void searchKeyword(String keyword) {
 		try {
-			List<String[]> userInfo = getUserInfo();
+			peerList = new HashMap<FileDetails, ArrayList<User>>();
+			List<User> userInfo = getUserInfo();
 			if (!userInfo.isEmpty()) {
-				for (String[] info : userInfo) {
+				for (User info : userInfo) {
 					System.out.println("Percorrer os userPorts e criar InquiryThreads");
-					Socket socket = new Socket(info[0], Integer.parseInt(info[1]));
-					new InquiryThread(socket, keyword, this).start();
+					Socket socket = new Socket(info.getUserAddress(), info.getUserPort());
+					InquiryThread iq = new InquiryThread(socket, keyword, this, info);
+					iq.start();
+					iq.join();
 				}
 			} else {
 				System.out.println("Client - Lista Vazia");
-				gui.getDefaultListModel().clear();
 			}
 		} catch (IOException e) {
 			System.out.println("INQUIRY THREAD EXCEPÇÃO");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
 	}
 
-	private List<String[]> getUserInfo() throws IOException, InterruptedException {
-		List<String[]> userInfo = new ArrayList<String[]>();
+
+	private List<User> getUserInfo() throws IOException, InterruptedException {
+		List<User> userInfo = new ArrayList<User>();
 		out.println(Directory.CONSULT);
 		while (true) {
 			String message = in.readLine();
@@ -131,8 +139,8 @@ public class Client {
 				String userAddress = message.split(" ")[1];
 				String userPort = message.split(" ")[2];
 				if (Integer.parseInt(userPort) != clientPort) {
-					String[] info = { userAddress, userPort };
-					userInfo.add(info);
+					User user = new User(userAddress, Integer.parseInt(userPort));
+					userInfo.add(user);
 
 				}
 			} else
@@ -140,12 +148,34 @@ public class Client {
 		}
 		return userInfo;
 	}
-
-	public void updateFileList(FileResponse fileResponse) {
-		System.out.println("FileList up to date.");
-		gui.updateList(fileResponse);
+	
+	public void updateFileList(FileResponse fileResponse, User user) {
+		addToPeerList(fileResponse, user);
 	}
 
+	private void addToPeerList(FileResponse fileResponse, User user) {
+		for (FileDetails fd : fileResponse.getList()) {
+			if(peerList.containsKey(fd))
+				peerList.get(fd).add(user);
+			else
+			{
+				List<User> list = new ArrayList<User>();
+				list.add(user);
+				peerList.put(fd, (ArrayList<User>) list);
+			}
+		}
+	}
+	
+	public FileResponse getPeerList()
+	{
+		FileResponse fp = new FileResponse();
+		for(FileDetails fd: peerList.keySet())
+		{
+			fp.addFileDetails(fd);
+		}
+		return fp;
+	}
+	
 	public FileResponse searchForFile(String fileName) {
 		FileResponse fileResponse = new FileResponse();
 		for (int i = 0; i != files.length; i++) {
@@ -155,7 +185,13 @@ public class Client {
 
 		}
 		return fileResponse;
-
+	}
+	
+	private List<User> getUsersWithFileDetails(FileDetails fileDetails)
+	{
+		return peerList.get(fileDetails);
 	}
 
+	//Se o utilizador tentar ligar-se a um utilizador que já nao existe, tratar desse caso. O utilizador podia ter estado online quando disse que tinha
+	//o ficheiro procurado, mas entretanto desligou-se.
 }

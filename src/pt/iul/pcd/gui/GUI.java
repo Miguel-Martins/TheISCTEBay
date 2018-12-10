@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashSet;
 
 import javax.swing.DefaultListModel;
@@ -15,6 +16,7 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 import pt.iul.pcd.client.Client;
@@ -64,8 +66,10 @@ public class GUI {
 		download = new JButton("Descarregar");
 		download.setPreferredSize(new Dimension(90, 20));
 		download.setFont(download.getFont().deriveFont(22.0f));
+		loadDownloadButtonAction();
 
-		resultList = new JList<FileDetails>();
+		userModelList = new DefaultListModel<FileDetails>();
+		resultList = new JList<FileDetails>(userModelList);
 		resultList.setPreferredSize(new Dimension(200, 200));
 		resultList.setFont(resultList.getFont().deriveFont(22.0f));
 
@@ -115,26 +119,20 @@ public class GUI {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.out.println("GUI - JButton, Procurar");
+				userModelList.clear();
 				client.searchKeyword(textInsert.getText());
-
+				updateList(client.getPeerList());
 			}
 		});
 	}
 
-	public DefaultListModel getDefaultListModel() {
-		return userModelList;
-	}
-
 	public void updateList(FileResponse fileResponse) {
-		userModelList = new DefaultListModel<FileDetails>();
 		synchronized (userModelList) {
-			for (FileDetails fd : fileResponse.getList()) {
+			for (FileDetails fd : fileResponse.getList())
 				userModelList.addElement(fd);
-			}
 			resultList.setModel(userModelList);
-			resultList.repaint();
 		}
+
 	}
 
 }

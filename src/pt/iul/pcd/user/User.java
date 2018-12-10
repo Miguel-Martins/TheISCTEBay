@@ -18,6 +18,9 @@ public class User {
 		return userPort;
 	}
 	
-	
+	@Override
+	public String toString() {
+		return userAddress + " " + userPort;
+	}
 	
 }

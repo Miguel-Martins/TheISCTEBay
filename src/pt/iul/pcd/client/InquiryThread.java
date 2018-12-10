@@ -7,6 +7,7 @@ import java.net.Socket;
 
 import pt.iul.pcd.message.FileResponse;
 import pt.iul.pcd.message.WordSearchMessage;
+import pt.iul.pcd.user.User;
 
 public class InquiryThread extends Thread {
 
@@ -17,8 +18,10 @@ public class InquiryThread extends Thread {
     private String keyword;
     // Cliente
     private Client client;
-	
-	public InquiryThread(Socket socket, String keyword, Client client)
+    //Utilizador ao qual o cliente se está a ligar
+    private User user;
+    
+	public InquiryThread(Socket socket, String keyword, Client client, User user)
 	{
 		try {
 			this.socket = socket;
@@ -26,6 +29,7 @@ public class InquiryThread extends Thread {
 			inFromClient = new ObjectInputStream(socket.getInputStream());
 			this.keyword = keyword;
 			this.client = client;
+			this.user = user;
 		} catch (IOException e) {
 			System.out.println("Excepção apanhada nos ObjectStreams da InquiryThread");
 		}
@@ -51,8 +55,7 @@ public class InquiryThread extends Thread {
 	private void dealWithInput() throws ClassNotFoundException, IOException
 	{	
 		FileResponse fileDetails = (FileResponse) inFromClient.readObject();
-		System.out.println("RECEBI O FILERESPONSE");
-		client.updateFileList(fileDetails);
+		client.updateFileList(fileDetails, user);
 	}
 	
 }

@@ -28,4 +28,8 @@ public class FileResponse implements Serializable{
 		return list;
 	}
 	
+	@Override
+	public String toString() {
+		return list.toString();
+	}
 }
