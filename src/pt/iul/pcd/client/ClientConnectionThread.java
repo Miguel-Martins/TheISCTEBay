@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.nio.file.Files;
 
+import pt.iul.pcd.message.Block;
 import pt.iul.pcd.message.FileBlockRequestMessage;
+import pt.iul.pcd.message.FilePart;
 import pt.iul.pcd.message.FileResponse;
 import pt.iul.pcd.message.WordSearchMessage;
 
@@ -42,18 +45,44 @@ public class ClientConnectionThread extends Thread {
 		while (true) {
 			Object message = inFromClient.readObject();
 			if (message != null) {
-				System.out.println(message.toString());
 				if (message instanceof WordSearchMessage) {
 					dealWithSearchMessage((WordSearchMessage) message);
 					interrupt();
 				} else if (message instanceof FileBlockRequestMessage) {
-
+					dealWithDownloadMessage((FileBlockRequestMessage) message);
 				}
 			}
 
 		}
 	}
-	
+
+	private void dealWithDownloadMessage(FileBlockRequestMessage message) {
+		try {
+			client.getThreadPool().submit(new Runnable() {
+
+				@Override
+				public void run() {
+					try {
+						Block block = message.getBlock();
+						byte[] fileContents = Files.readAllBytes(client.getFile(block.getFileName()).toPath());
+						byte[] filesToSend = new byte[block.getLength()];
+						for (int i = 0; i != block.getLength(); i++) {
+							filesToSend[i] = fileContents[block.getOffSet() + i];
+						}
+						FilePart filePart = new FilePart(filesToSend);
+						outToClient.writeObject(filePart);
+						outToClient.flush();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+				}
+			});
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
 	private void dealWithSearchMessage(WordSearchMessage message) throws IOException {
 		FileResponse answer = client.searchForFile(message.getKeyword());
 		outToClient.writeObject(answer);

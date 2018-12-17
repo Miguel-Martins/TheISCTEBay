@@ -66,6 +66,7 @@ public class GUI {
 		download = new JButton("Descarregar");
 		download.setPreferredSize(new Dimension(90, 20));
 		download.setFont(download.getFont().deriveFont(22.0f));
+		download.setEnabled(false);
 		loadDownloadButtonAction();
 
 		userModelList = new DefaultListModel<FileDetails>();
@@ -122,6 +123,19 @@ public class GUI {
 				userModelList.clear();
 				client.searchKeyword(textInsert.getText());
 				updateList(client.getPeerList());
+				download.setEnabled(true);
+			}
+		});
+	}
+
+	private void loadDownloadButtonAction() {
+		download.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+
+				client.downloadKeyword(userModelList.getElementAt(resultList.getSelectedIndex()));
+
 			}
 		});
 	}
